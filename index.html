@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alliance War Readiness Survey</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 sm:p-8 relative">
+        
+        <!-- Loading overlay for translation or submitting -->
+        <div id="loadingOverlay" class="hidden absolute inset-0 bg-slate-950/70 backdrop-blur-xs z-30 flex items-center justify-center rounded-2xl">
+            <div class="flex items-center gap-3 text-blue-400 font-medium text-sm">
+                <div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <span id="loadingText" data-base="Processing...">Processing...</span>
+            </div>
+        </div>
+
+        <!-- Top Bar -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-6 border-b border-slate-800 text-sm">
+            <div>
+                <span id="lblTz" data-base="Detected Timezone:" class="text-slate-400 block text-xs">Detected Timezone:</span>
+                <strong id="tzDisplay" class="text-amber-400 font-mono">Loading...</strong>
+            </div>
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <label id="lblLang" data-base="Language:" for="langSelect" class="text-slate-400 text-xs whitespace-nowrap">Language:</label>
+                <select id="langSelect" onchange="changeLanguage(this.value)" class="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto max-h-48 overflow-y-auto">
+                </select>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 id="mainTitle" data-base="Alliance War Readiness Survey" class="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-2">Alliance War Readiness Survey</h1>
+            <p id="mainSubtitle" data-base="Please submit your main squad information and availability for the upcoming war." class="text-slate-400 text-sm">Please submit your main squad information and availability for the upcoming war.</p>
+        </div>
+
+        <!-- Survey Form -->
+        <form id="surveyForm" onsubmit="handleSubmit(event)" class="space-y-6">
+            
+            <!-- Username Selection -->
+            <div class="space-y-2 relative">
+                <label id="lblUser" data-base="Select Your Username" class="block text-sm font-medium text-slate-300">Select Your Username</label>
+                <div id="dropdownTrigger" onclick="toggleDropdown()" class="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 cursor-pointer flex justify-between items-center hover:border-slate-600 transition">
+                    <span id="selectedUsernameText" class="text-slate-400">Search your name...</span>
+                    <span class="text-slate-400 text-xs">▼</span>
+                </div>
+
+                <div id="dropdownMenu" class="hidden absolute z-20 mt-1 w-full bg-slate-900 border border-slate-700 rounded-xl shadow-xl overflow-hidden">
+                    <div class="p-2 border-b border-slate-800">
+                        <input type="text" id="userSearchInput" data-base="Search your name..." oninput="filterPlayers()" placeholder="Search your name..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                    </div>
+                    <div id="playerListContainer" class="max-h-48 overflow-y-auto"></div>
+                </div>
+            </div>
+
+            <!-- Squad Type -->
+            <div class="space-y-2">
+                <label id="lblSquadType" data-base="Main Squad Type" class="block text-sm font-medium text-slate-300">Main Squad Type</label>
+                <div class="grid grid-cols-3 gap-3">
+                    <button type="button" onclick="setSquadType('tank')" id="btn-tank" data-base="Tank" class="squad-btn py-3 px-4 rounded-xl font-medium text-sm border transition text-center bg-blue-600/20 border-blue-500 text-blue-400 shadow-lg shadow-blue-500/10">Tank</button>
+                    <button type="button" onclick="setSquadType('air')" id="btn-air" data-base="Air" class="squad-btn py-3 px-4 rounded-xl font-medium text-sm border transition text-center bg-slate-800/50 border-slate-700/80 text-slate-400 hover:bg-slate-800">Air</button>
+                    <button type="button" onclick="setSquadType('missile')" id="btn-missile" data-base="Missile" class="squad-btn py-3 px-4 rounded-xl font-medium text-sm border transition text-center bg-slate-800/50 border-slate-700/80 text-slate-400 hover:bg-slate-800">Missile</button>
+                </div>
+            </div>
+
+            <!-- Squad Power -->
+            <div class="space-y-2">
+                <label id="lblPower" data-base="Main Squad Power (in Millions)" class="block text-sm font-medium text-slate-300">Main Squad Power (in Millions)</label>
+                <div class="relative">
+                    <input type="text" id="powerInput" data-base="e.g., 45.5" oninput="handlePowerInput(this.value)" placeholder="e.g., 45.5" class="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
+                    <span class="absolute right-4 top-3.5 text-xs text-slate-500 font-medium">MILLIONS</span>
+                </div>
+                <div class="flex justify-between items-center text-xs text-slate-400 px-1">
+                    <span id="powerNote" data-base="Numbers only (auto-cleans letters/spaces).">Numbers only (auto-cleans letters/spaces).</span>
+                    <span id="cleanedPowerDisplay" class="text-emerald-400 font-mono font-semibold hidden">Cleaned: 0M</span>
+                </div>
+            </div>
+
+            <!-- Availability -->
+            <div class="space-y-3">
+                <label id="lblAvail" data-base="War Availability" class="block text-sm font-medium text-slate-300">War Availability</label>
+                
+                <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 text-xs space-y-1 text-slate-400">
+                    <div class="flex justify-between">
+                        <span>📅 Wednesday:</span>
+                        <strong id="wedTime" class="text-slate-200 font-mono">Calculating...</strong>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>📅 Saturday:</span>
+                        <strong id="satTime" class="text-slate-200 font-mono">Calculating...</strong>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <button type="button" onclick="setAvailability('both')" id="avail-both" class="avail-btn p-3 rounded-xl text-xs font-medium border transition text-left flex items-center justify-between bg-blue-600/20 border-blue-500 text-blue-300">
+                        <span id="txtBoth" data-base="Both Days">Both Days</span><span class="w-3 h-3 rounded-full border bg-blue-500 border-blue-400"></span>
+                    </button>
+                    <button type="button" onclick="setAvailability('wednesday')" id="avail-wednesday" class="avail-btn p-3 rounded-xl text-xs font-medium border transition text-left flex items-center justify-between bg-slate-800/50 border-slate-700/80 text-slate-400">
+                        <span id="txtWed" data-base="Wednesday Only">Wednesday Only</span><span class="w-3 h-3 rounded-full border border-slate-600"></span>
+                    </button>
+                    <button type="button" onclick="setAvailability('saturday')" id="avail-saturday" class="avail-btn p-3 rounded-xl text-xs font-medium border transition text-left flex items-center justify-between bg-slate-800/50 border-slate-700/80 text-slate-400">
+                        <span id="txtSat" data-base="Saturday Only">Saturday Only</span><span class="w-3 h-3 rounded-full border border-slate-600"></span>
+                    </button>
+                    <button type="button" onclick="setAvailability('none')" id="avail-none" class="avail-btn p-3 rounded-xl text-xs font-medium border transition text-left flex items-center justify-between bg-slate-800/50 border-slate-700/80 text-slate-400">
+                        <span id="txtNone" data-base="None / Unavailable">None / Unavailable</span><span class="w-3 h-3 rounded-full border border-slate-600"></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" id="submitBtn" data-base="Submit War Data" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3.5 px-4 rounded-xl transition shadow-lg shadow-blue-600/20 text-sm mt-2">
+                Submit War Data
+            </button>
+        </form>
+
+        <!-- Success Screen -->
+        <div id="successScreen" class="hidden text-center py-8 space-y-6">
+            <div class="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto text-3xl border border-emerald-500/20">✓</div>
+            <div>
+                <h2 id="successTitle" data-base="Submission Successful!" class="text-xl font-semibold text-emerald-400 mb-2">Submission Successful!</h2>
+                <p id="successMsg" data-base="Your response has been safely recorded to the master sheet." class="text-slate-300 text-sm">Your response has been safely recorded to the master sheet.</p>
+            </div>
+            <button onclick="resetForm()" id="editBtn" data-base="Submit Another Response" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium px-5 py-2.5 rounded-xl transition text-sm">
+                Submit Another Response
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE:
+        const GOOGLE_SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+        const worldLanguages = [
+            { code: "en", name: "English" },
+            { code: "es", name: "Español (Spanish)" },
+            { code: "zh", name: "中文 (Chinese)" },
+            { code: "hi", name: "हिन्दी (Hindi)" },
+            { code: "ar", name: "العربية (Arabic)" },
+            { code: "pt", name: "Português (Portuguese)" },
+            { code: "ru", name: "Русский (Russian)" },
+            { code: "ja", name: "日本語 (Japanese)" },
+            { code: "de", name: "Deutsch (German)" },
+            { code: "fr", name: "Français (French)" },
+            { code: "ko", name: "한국어 (Korean)" },
+            { code: "it", name: "Italiano (Italian)" },
+            { code: "tr", name: "Türkçe (Turkish)" },
+            { code: "vi", name: "Tiếng Việt (Vietnamese)" },
+            { code: "pl", name: "Polski (Polish)" },
+            { code: "uk", name: "Українська (Ukrainian)" },
+            { code: "id", name: "Bahasa Indonesia (Indonesian)" },
+            { code: "nl", name: "Nederlands (Dutch)" },
+            { code: "th", name: "ไทย (Thai)" },
+            { code: "sv", name: "Svenska (Swedish)" },
+            { code: "el", name: "Ελληνικά (Greek)" },
+            { code: "cs", name: "Čeština (Czech)" },
+            { code: "ro", name: "Română (Romanian)" },
+            { code: "hu", name: "Magyar (Hungarian)" },
+            { code: "fi", name: "Suomi (Finnish)" },
+            { code: "da", name: "Dansk (Danish)" },
+            { code: "no", name: "Norsk (Norwegian)" },
+            { code: "fa", name: "فارسی (Persian)" },
+            { code: "he", name: "עברית (Hebrew)" },
+            { code: "ms", name: "Bahasa Melayu (Malay)" },
+            { code: "fil", name: "Filipino (Tagalog)" }
+        ].sort((a, b) => a.name.localeCompare(b.name));
+
+        const players = ["AlphaWolf", "BraveHeart", "CyberNinja", "DarkPhoenix", "EchoRider", "FrostBite", "GhostRider", "HavocBringer", "IronClad", "JungleKing", "KillerBee", "LoneStar", "Maverick", "NightHawk", "OmegaPrime", "Phantom", "Quantum", "Reaper", "ShadowFox", "Titanium"].sort();
+        
+        let selectedUsername = "";
+        let selectedSquadType = "tank";
+        let cleanedPowerValue = 0;
+        let selectedAvailability = "both";
+        let detectedTz = "";
+        const translationCache = { en: {} };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+            const tzAbbr = new Intl.DateTimeFormat('en-US', { timeZoneName: 'short', timeZone: detectedTz })
+                .formatToParts(new Date())
+                .find(part => part.type === 'timeZoneName')?.value || detectedTz;
+                
+            document.getElementById('tzDisplay').innerText = `${detectedTz} (${tzAbbr})`;
+            
+            const langSelect = document.getElementById('langSelect');
+            worldLanguages.forEach(l => {
+                const opt = document.createElement('option');
+                opt.value = l.code;
+                opt.innerText = l.name;
+                langSelect.appendChild(opt);
+            });
+
+            document.querySelectorAll('[data-base]').forEach(el => {
+                translationCache.en[el.id] = el.getAttribute('data-base');
+            });
+
+            const browserLang = (navigator.language || navigator.userLanguage || "en").split("-")[0];
+            if(worldLanguages.some(l => l.code === browserLang)) {
+                langSelect.value = browserLang;
+                if(browserLang !== 'en') changeLanguage(browserLang);
+            }
+
+            calculateLocalTimes();
+            renderPlayers(players);
+
+            window.addEventListener('click', (e) => {
+                if (!e.target.closest('#dropdownTrigger') && !e.target.closest('#dropdownMenu')) {
+                    document.getElementById('dropdownMenu').classList.add('hidden');
+                }
+            });
+        });
+
+        function toggleDropdown() {
+            const menu = document.getElementById('dropdownMenu');
+            menu.classList.toggle('hidden');
+            if(!menu.classList.contains('hidden')) {
+                document.getElementById('userSearchInput').focus();
+            }
+        }
+
+        function renderPlayers(list) {
+            const container = document.getElementById('playerListContainer');
+            container.innerHTML = "";
+            if (list.length === 0) {
+                container.innerHTML = '<div class="px-4 py-3 text-sm text-slate-500 text-center">No players found</div>';
+                return;
+            }
+            list.forEach(p => {
+                const div = document.createElement('div');
+                div.className = `px-4 py-2.5 text-sm cursor-pointer transition ${selectedUsername === p ? 'bg-blue-600 text-white' : 'hover:bg-slate-800 text-slate-300'}`;
+                div.innerText = p;
+                div.onclick = () => {
+                    selectedUsername = p;
+                    document.getElementById('selectedUsernameText').innerText = p;
+                    document.getElementById('selectedUsernameText').className = "text-white font-medium";
+                    document.getElementById('dropdownMenu').classList.add('hidden');
+                };
+                container.appendChild(div);
+            });
+        }
+
+        function filterPlayers() {
+            const query = document.getElementById('userSearchInput').value.toLowerCase();
+            const filtered = players.filter(p => p.toLowerCase().includes(query));
+            renderPlayers(filtered);
+        }
+
+        function setSquadType(type) {
+            selectedSquadType = type;
+            ['tank', 'air', 'missile'].forEach(t => {
+                const btn = document.getElementById(`btn-${t}`);
+                if(t === type) {
+                    btn.className = "squad-btn py-3 px-4 rounded-xl font-medium text-sm border transition text-center bg-blue-600/20 border-blue-500 text-blue-400 shadow-lg shadow-blue-500/10";
+                } else {
+                    btn.className = "squad-btn py-3 px-4 rounded-xl font-medium text-sm border transition text-center bg-slate-800/50 border-slate-700/80 text-slate-400 hover:bg-slate-800";
+                }
+            });
+        }
+
+        function handlePowerInput(val) {
+            const cleaned = val.replace(/[^0-9.]/g, '');
+            const parts = cleaned.split('.');
+            const sanitized = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : cleaned;
+            cleanedPowerValue = parseFloat(sanitized) || 0;
+            
+            const display = document.getElementById('cleanedPowerDisplay');
+            if(cleanedPowerValue > 0) {
+                display.innerText = `Cleaned: ${cleanedPowerValue}M`;
+                display.classList.remove('hidden');
+            } else {
+                display.classList.add('hidden');
+            }
+        }
+
+        function setAvailability(avail) {
+            selectedAvailability = avail;
+            ['both', 'wednesday', 'saturday', 'none'].forEach(a => {
+                const btn = document.getElementById(`avail-${a}`);
+                const dot = btn.querySelector('span:last-child');
+                if(a === avail) {
+                    btn.className = "avail-btn p-3 rounded-xl text-xs font-medium border transition text-left flex items-center justify-between bg-blue-600/20 border-blue-500 text-blue-300";
+                    dot.className = "w-3 h-3 rounded-full border bg-blue-500 border-blue-400";
+                } else {
+                    btn.className = "avail-btn p-3 rounded-xl text-xs font-medium border transition text-left flex items-center justify-between bg-slate-800/50 border-slate-700/80 text-slate-400";
+                    dot.className = "w-3 h-3 rounded-full border border-slate-600";
+                }
+            });
+        }
+
+        function calculateLocalTimes() {
+            try {
+                const formatter = new Intl.DateTimeFormat('en-US', {
+                    timeZone: detectedTz,
+                    weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true, timeZoneName: 'short'
+                });
+
+                const getTargetTime = (targetDay) => {
+                    const d = new Date();
+                    const utcMs = d.getTime() + (d.getTimezoneOffset() * 60000);
+                    const serverMs = utcMs - (2 * 3600000); 
+                    const sDate = new Date(serverMs);
+                    let diff = targetDay - sDate.getUTCDay();
+                    if(diff < 0 || (diff === 0 && (sDate.getUTCHour() * 60 + sDate.getUTCMinutes() > 750))) diff += 7;
+                    
+                    const targetServerEpoch = Date.UTC(sDate.getUTCFullYear(), sDate.getUTCMonth(), sDate.getUTCDate() + diff, 14, 30, 0);
+                    return formatter.format(new Date(targetServerEpoch));
+                };
+
+                document.getElementById('wedTime').innerText = getTargetTime(3);
+                document.getElementById('satTime').innerText = getTargetTime(6);
+            } catch(e) { console.error(e); }
+        }
+
+        async function changeLanguage(lang) {
+            const elements = document.querySelectorAll('[data-base]');
+            if (translationCache[lang]) {
+                elements.forEach(el => {
+                    const translatedText = translationCache[lang][el.id];
+                    if (translatedText) {
+                        if (el.tagName === 'INPUT') el.placeholder = translatedText;
+                        else el.innerText = translatedText;
+                    }
+                });
+                return;
+            }
+
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            translationCache[lang] = {};
+
+            try {
+                for (const el of elements) {
+                    const originalText = el.getAttribute('data-base');
+                    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(originalText)}&langpair=en|${lang}`);
+                    const data = await res.json();
+                    const translated = data.responseData?.translatedText || originalText;
+
+                    translationCache[lang][el.id] = translated;
+
+                    if (el.tagName === 'INPUT') el.placeholder = translated;
+                    else el.innerText = translated;
+                }
+            } catch (err) {
+                console.error("Translation failed", err);
+            } finally {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }
+        }
+
+        async function handleSubmit(e) {
+            e.preventDefault();
+            if(!selectedUsername) { alert("Please select your username."); return; }
+            if(cleanedPowerValue <= 0) { alert("Please enter a valid squad power."); return; }
+
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+
+            const payload = {
+                timestamp: new Date().toISOString(),
+                username: selectedUsername,
+                squadType: selectedSquadType,
+                power: cleanedPowerValue,
+                availability: selectedAvailability,
+                timezone: detectedTz
+            };
+
+            try {
+                await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                document.getElementById('surveyForm').classList.add('hidden');
+                document.getElementById('successScreen').classList.remove('hidden');
+            } catch(err) {
+                alert("Submission failed. Please check your network connection.");
+                console.error(err);
+            } finally {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('successScreen').classList.add('hidden');
+            document.getElementById('surveyForm').classList.remove('hidden');
+            selectedUsername = "";
+            document.getElementById('selectedUsernameText').innerText = "Search your name...";
+            document.getElementById('selectedUsernameText').className = "text-slate-400";
+            document.getElementById('powerInput').value = "";
+            cleanedPowerValue = 0;
+            document.getElementById('cleanedPowerDisplay').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

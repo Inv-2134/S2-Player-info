@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alliance War Readiness Survey</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "y7jcy8l3kg");
+    </script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4">
 
@@ -180,6 +187,11 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+            // clarity
+             if (typeof clarity === 'function') {
+                clarity("set", "timezone", detectedTz);
+            }
+            // clarity
             const tzAbbr = new Intl.DateTimeFormat('en-US', { timeZoneName: 'short', timeZone: detectedTz })
                 .formatToParts(new Date())
                 .find(part => part.type === 'timeZoneName')?.value || detectedTz;
@@ -199,6 +211,11 @@
             });
 
             const browserLang = (navigator.language || navigator.userLanguage || "en").split("-")[0];
+            // clarity
+            if (typeof clarity === 'function') {
+                clarity("set", "deflanguage", browserLang);
+            }
+            // clarity
             if(worldLanguages.some(l => l.code === browserLang)) {
                 langSelect.value = browserLang;
                 if(browserLang !== 'en') changeLanguage(browserLang);
@@ -238,6 +255,12 @@
                     document.getElementById('selectedUsernameText').innerText = p;
                     document.getElementById('selectedUsernameText').className = "text-white font-medium";
                     document.getElementById('dropdownMenu').classList.add('hidden');
+                    // Clarity
+                     if (typeof clarity === 'function') {
+                        clarity("identify", p, undefined, undefined, p);
+                        clarity("set", "player", p);
+                    }
+                    // clarity
                 };
                 container.appendChild(div);
             });
@@ -251,6 +274,12 @@
 
         function setSquadType(type) {
             selectedSquadType = type;
+            // clarity
+            if (typeof clarity === 'function') {
+                clarity("set", "squad_type", type);
+                clarity("event", "squad_selected");
+            }
+            // clarity
             ['tank', 'air', 'missile'].forEach(t => {
                 const btn = document.getElementById(`btn-${t}`);
                 if(t === type) {
@@ -266,7 +295,11 @@
             const parts = cleaned.split('.');
             const sanitized = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : cleaned;
             cleanedPowerValue = parseFloat(sanitized) || 0;
-            
+            // clarity
+            if (typeof clarity === 'function' && cleanedPowerValue > 0) {
+                clarity("set", "squad_power", String(cleanedPowerValue));
+            }
+            // clarity
             const display = document.getElementById('cleanedPowerDisplay');
             if(cleanedPowerValue > 0) {
                 display.innerText = `Cleaned: ${cleanedPowerValue}M`;
@@ -278,6 +311,12 @@
 
         function setAvailability(avail) {
             selectedAvailability = avail;
+            // clarity
+            if (typeof clarity === 'function') {
+                clarity("set", "availability", avail);
+                clarity("event", "availability_selected");
+            }
+            // clarity
             ['both', 'wednesday', 'saturday', 'none'].forEach(a => {
                 const btn = document.getElementById(`avail-${a}`);
                 const dot = btn.querySelector('span:last-child');
@@ -288,6 +327,7 @@
                     btn.className = "avail-btn p-3 rounded-xl text-xs font-medium border transition text-left flex items-center justify-between bg-slate-800/50 border-slate-700/80 text-slate-400";
                     dot.className = "w-3 h-3 rounded-full border border-slate-600";
                 }
+
             });
         }
 
@@ -316,6 +356,12 @@
         }
 
         async function changeLanguage(lang) {
+            // clarity
+             if (typeof clarity === 'function') {
+                clarity("set", "language", lang);
+                clarity("event", "language_changed");
+            }
+            // clarity
             currentLang = lang;
             const elements = document.querySelectorAll('[data-base]');
             if (translationCache[lang]) {
@@ -378,8 +424,15 @@
                     body: JSON.stringify(payload)
                 });
 
+                // clarity
+                if (typeof clarity === 'function') {
+                    clarity("event", "survey_submitted");
+                }
+                // clarity
+                
                 document.getElementById('surveyForm').classList.add('hidden');
                 document.getElementById('successScreen').classList.remove('hidden');
+
             } catch(err) {
                 alert("Submission failed. Please check your network connection.");
                 console.error(err);
